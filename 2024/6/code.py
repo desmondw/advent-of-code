@@ -21,9 +21,13 @@ class Guard:
     def isAtOrigin(self):
         return self.x == self.turnHistory[0] and self.y == self.turnHistory[1]
 
-    def isInLoop(self, rows):
+    def wouldBeInLoop(self, rows, dx, dy):
+        # setup
+        tileState = rows[pos.y][pos.x]
+        rows[pos.y][pos.x] = '#'
+
         # follow path until either OOB (False) or new turn matches a turn history temp (True)
-        loopPos = Guard(self.x, self.y, self.d)
+        loopPos = Guard(self.x - dx, self.y - dy, self.d)
         loopPos.turnHistory = self.turnHistory[:]
 
         loopPos.turn()
@@ -34,6 +38,7 @@ class Guard:
             loopPos.y += dyl
             loopPos.x += dxl
             if loopPos.isOOB(rows):
+                rows[pos.y][pos.x] = tileState
                 return False
             if loopPos.isColliding(rows):
                 loopPos.y -= dyl
@@ -42,25 +47,24 @@ class Guard:
 
                 # turn duplicate check
                 if loopPos.turnHistory[-1] in loopPos.turnHistory[:-1]:
+                    rows[pos.y][pos.x] = tileState
                     return True
 
 rows = []
-pos = Guard(-1, -1)
+pos:Guard
 while (row := [x for x in f.readline().rstrip()]) and len(row[0]):
     if '^' in row:
-        pos.x = row.index('^')
-        pos.y = len(rows)
+        pos = Guard(row.index('^'), len(rows))
+        # pos.x = row.index('^')
+        # pos.y = len(rows)
         row[pos.x] = 'X'
     rows.append(row)
-    # print(row)
-# print(f'grid loaded: {len(rows)} rows, {len(rows[0])} cols')
 
 total = 1
 total2 = 0
 while True:
     dy = pos.d - 1  if pos.d % 2 == 0 else 0
     dx = -pos.d + 2 if pos.d % 2 == 1 else 0
-    # oldPos = (pos.x, pos.y)
 
     pos.y += dy
     pos.x += dx
@@ -76,53 +80,27 @@ while True:
         if rows[pos.y][pos.x] == '.':
             total += 1
 
-
         # obstruction loop?
-        if rows[pos.y][pos.x] != 'O' and not pos.isAtOrigin():
-            # setup
-            tileState = rows[pos.y][pos.x]
-            rows[pos.y][pos.x] = '#'
-            pos.y -= dy
-            pos.x -= dx
-
-            # test loop
-            isLoop = pos.isInLoop(rows)
-
-            # revert setup
-            pos.y += dy
-            pos.x += dx
-            rows[pos.y][pos.x] = tileState
-
-            # loop follow-up
-            if isLoop:
-                total2 += 1
-                rows[pos.y][pos.x] = 'O'
-
-        # if len(pos.turnHistory) >= 3:
-        #     yLoop = pos.d % 2 == 0 and pos.y - dy == pos.turnHistory[-3][1]
-        #     xLoop = pos.d % 2 == 1 and pos.x - dx == pos.turnHistory[-3][0]
-        #     if (xLoop or yLoop) and rows[pos.y][pos.x] != 'O' and not pos.isAtOrigin():
-        #         total2 += 1
-        #         rows[pos.y][pos.x] = 'O'
-
-        # for more complex obstruction loops...
-            # check w/ above logic against ALL pos.turnHistory[0:-2]
-            # (also missing:)
-                # 1) if there's a native obstruction in the way after the turn (on an unwalked path)
-              # 2) need to test and project a turn line for EVERY step to see if I hit:
-                    # a) a T-intersection (wall parallel to previous path)
-                    # b) could introduce a completely new loop, separate from previous paths
+        if rows[pos.y][pos.x] == '.' and not pos.isAtOrigin() and pos.wouldBeInLoop(rows, dx, dy):
+            total2 += 1
+            rows[pos.y][pos.x] = 'O'
 
         # mark
         if rows[pos.y][pos.x] == '.':
             rows[pos.y][pos.x] = 'X'
 
-    # print(f'oldPos: {oldPos[0]},{oldPos[1]} [{rows[oldPos[1]][oldPos[0]]}] | newPos: {pos.x},{pos.y}')
-    # print(f'oldPos: {oldPos[0]},{oldPos[1]} [{rows[oldPos[1]][oldPos[0]]}] | newPos: {pos.x},{pos.y} [{rows[pos.y][pos.x]}]')
 
+# print(f'grid: {len(rows)} rows, {len(rows[0])} cols')
 # for row in rows:
 #     print(''.join(row))
 
 
 print(total)
 print(total2)
+
+# oCount = 0
+# for row in rows:
+#     oCount += row.count('O')
+# print(f'num of "O"s: {oCount}')
+# print(f'origin: {pos.turnHistory[0]}')
+# print(rows[pos.turnHistory[0][1]][pos.turnHistory[0][0]])
