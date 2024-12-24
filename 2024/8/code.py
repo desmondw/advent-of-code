@@ -13,7 +13,7 @@ while (line := f.readline().rstrip()) and len(line):
     y += 1
 
 width = x+1
-height = y+1
+height = y
 
 antinodes = {}
 for antennaType in antennas.keys():
